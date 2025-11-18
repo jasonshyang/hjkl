@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 /// Direction for moving in the buffer
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Direction {
@@ -62,12 +64,32 @@ impl Buffer {
         }
     }
 
+    /// Pushes a new line at the end of the buffer
+    pub fn push_line(&mut self, line: String) {
+        self.0.push(line);
+    }
+
     pub fn delete_char(&mut self, pos: Position) {
         if let Some(line) = self.0.get_mut(pos.row)
             && pos.col < line.len()
         {
             line.remove(pos.col);
         }
+    }
+}
+
+impl From<Vec<String>> for Buffer {
+    fn from(lines: Vec<String>) -> Self {
+        Buffer(lines)
+    }
+}
+
+impl Display for Buffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for line in &self.0 {
+            writeln!(f, "{}", line)?;
+        }
+        Ok(())
     }
 }
 
@@ -169,12 +191,6 @@ impl Position {
                 }
             }
         }
-    }
-}
-
-impl From<Vec<String>> for Buffer {
-    fn from(lines: Vec<String>) -> Self {
-        Buffer(lines)
     }
 }
 
