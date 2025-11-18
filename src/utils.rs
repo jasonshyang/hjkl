@@ -3,6 +3,7 @@
 /// A word consists of:
 /// 1. A sequence of letters, digits and underscores, OR
 /// 2. A sequence of other non-blank characters
+///
 /// Separated with white space (spaces, tabs).
 ///
 /// Returns None if positioned on whitespace or if the position is invalid.

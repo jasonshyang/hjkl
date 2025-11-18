@@ -1,7 +1,101 @@
 use crate::{
-    types::{Buffer, Position},
+    types::{Buffer, Direction, Position},
     utils::word_boundaries,
 };
+
+// ===========================================
+// w MOTION
+// ===========================================
+
+pub fn w_motion(buffer: &Buffer, mut position: Position, count: usize) -> Position {
+    for _ in 0..count {
+        if !w_motion_once(buffer, &mut position) {
+            break; // Can't move further
+        }
+    }
+    position
+}
+
+// Jump forwards to the start of a word, stop at empty line
+fn w_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
+    let Some(line) = buffer.get_line(position.row) else {
+        return false;
+    };
+
+    match word_boundaries(line, position.col) {
+        // We are on a word, we need to get to next word start
+        Some((_, end)) => {
+            // We first move to the end of current word
+            position.col = end;
+
+            // We then move right and skip all whitespaces
+            position.move_one_char_skip_spaces(buffer, Direction::Forward)
+        }
+        // We are on a space
+        None => {
+            // Just need to move right
+            position.move_one_char(buffer, Direction::Forward)
+        }
+    }
+}
+
+// ===========================================
+// b MOTION
+// ===========================================
+
+pub fn b_motion(buffer: &Buffer, mut position: Position, count: usize) -> Position {
+    for _ in 0..count {
+        if !b_motion_once(buffer, &mut position) {
+            break; // Can't move further
+        }
+    }
+    position
+}
+
+/// Jump backwards to the start of a word
+pub fn b_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
+    let Some(line) = buffer.get_line(position.row) else {
+        return false;
+    };
+
+    match word_boundaries(line, position.col) {
+        // We are on a word, we need to get to previous word start
+        Some((start, _)) => {
+            if position.col == start {
+                // Already at the start of the word, need to move left first
+                if !position.move_one_char_skip_spaces(buffer, Direction::Backward) {
+                    return false;
+                }
+
+                let Some(line) = buffer.get_line(position.row) else {
+                    return false;
+                };
+
+                match word_boundaries(line, position.col) {
+                    Some((prev_start, _)) => {
+                        // Move to the start of the previous word
+                        position.col = prev_start;
+                        true
+                    }
+                    None => true,
+                }
+            } else {
+                // Just move to the start of the word
+                position.col = start;
+                true
+            }
+        }
+        // We are on a space
+        None => {
+            // Just need to move left
+            position.move_one_char(buffer, Direction::Backward)
+        }
+    }
+}
+
+// ===========================================
+// e MOTION
+// ===========================================
 
 /// Emulate e motion
 pub fn e_motion(buffer: &Buffer, mut position: Position, count: usize) -> Position {
@@ -14,10 +108,11 @@ pub fn e_motion(buffer: &Buffer, mut position: Position, count: usize) -> Positi
 }
 
 /// Forward to the end of word |inclusive|. Does not stop in an empty line.
-pub fn e_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
+fn e_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
     loop {
         // We first move right by one
-        if !position.move_right(&buffer) {
+        if !position.move_one_char(buffer, Direction::Forward) {
+            // If we can't move right, we're at the end of the buffer
             return false;
         }
 
@@ -54,7 +149,9 @@ mod motion_tests {
 
         let buffer = Buffer::from(lines);
 
-        let start_pos = Position { row: 0, col: 0 };
+        let start_pos = Position { row: 0, col: 1 };
+        assert_eq!(buffer.get_char(&start_pos).unwrap(), 'e');
+
         let new_pos = e_motion(&buffer, start_pos, 1);
         assert_eq!(buffer.get_char(&new_pos).unwrap(), 'o');
 
@@ -96,5 +193,100 @@ mod motion_tests {
 
         let new_pos = e_motion(&buffer, new_pos, 2);
         assert_eq!(buffer.get_char(&new_pos).unwrap(), ';'); // ;
+    }
+
+    #[test]
+    fn test_motion_w() {
+        let lines = vec![
+            String::from("Hello, world! This is a test."),
+            String::from("Another line here."),
+            String::from(""),
+            String::from("End of the buffer."),
+            String::from("const CHAR = '*=*';"),
+        ];
+
+        let buffer = Buffer::from(lines);
+
+        let start_pos = Position { row: 0, col: 1 };
+        assert_eq!(buffer.get_char(&start_pos).unwrap(), 'e');
+
+        let new_pos = w_motion(&buffer, start_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), ',');
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'w');
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), '!');
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'T');
+
+        let new_pos = w_motion(&buffer, new_pos, 2);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'a');
+
+        let new_pos = w_motion(&buffer, new_pos, 2);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), '.');
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'A'); // Another
+
+        let new_pos = w_motion(&buffer, new_pos, 3);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), '.'); // .
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert!(buffer.is_empty_line(&new_pos)); // Landed on the empty line
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'E'); // End
+
+        let new_pos = w_motion(&buffer, new_pos, 3);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'b'); // buffer
+
+        let new_pos = w_motion(&buffer, new_pos, 4);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), '=');
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), '\'');
+
+        let new_pos = w_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), ';');
+    }
+
+    #[test]
+    fn test_motion_b() {
+        let lines = vec![
+            String::from("Hello, world! This is a test."),
+            String::from("Another line here."),
+            String::from(""),
+            String::from("End of the buffer."),
+            String::from("const CHAR = '*=*';"),
+        ];
+
+        let buffer = Buffer::from(lines);
+
+        let start_pos = Position { row: 4, col: 16 }; // position at '*'
+        assert_eq!(buffer.get_char(&start_pos).unwrap(), '*');
+
+        let new_pos = b_motion(&buffer, start_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), '\'');
+
+        let new_pos = b_motion(&buffer, new_pos, 2);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'C'); // CHAR
+
+        let new_pos = b_motion(&buffer, new_pos, 3);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 'b'); // buffer
+
+        let new_pos = b_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 't');
+
+        let new_pos = b_motion(&buffer, new_pos, 3);
+        assert!(buffer.is_empty_line(&new_pos)); // Landed on empty line
+
+        let new_pos = b_motion(&buffer, new_pos, 1);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), '.');
+
+        let new_pos = b_motion(&buffer, new_pos, 5);
+        assert_eq!(buffer.get_char(&new_pos).unwrap(), 't'); // test
     }
 }
