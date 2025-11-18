@@ -1,17 +1,3 @@
-/// Represents different Vim Motions
-pub enum Motion {
-    Left,         // h
-    Down,         // j
-    Up,           // k
-    Right,        // l
-    WordStart,    // w - start of next word
-    WordEnd,      // e - end of current/next word
-    WordBackward, // b - start of previous word
-    WORDStart,    // W - start of next WORD
-    WORDEnd,      // E - end of current/next WORD
-    WORDBackward, // B - start of previous WORD
-}
-
 /// Direction for moving in the buffer
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Direction {
@@ -151,6 +137,38 @@ impl Position {
             }
         }
         true
+    }
+
+    /// Moves the position one line to the specified direction.
+    pub fn move_one_line(&mut self, buffer: &Buffer, direction: Direction) -> bool {
+        match direction {
+            Direction::Forward => {
+                if self.row + 1 < buffer.rows() {
+                    self.row += 1;
+                    let next_line = buffer.get_line(self.row).expect("Row should exist");
+                    let line_len = next_line.len();
+
+                    // Adjust column if out of bounds
+                    self.col = self.col.min(line_len.saturating_sub(1));
+                    true
+                } else {
+                    false
+                }
+            }
+            Direction::Backward => {
+                if self.row > 0 {
+                    self.row -= 1;
+                    let prev_line = buffer.get_line(self.row).expect("Row should exist");
+                    let line_len = prev_line.len();
+
+                    // Adjust column if out of bounds
+                    self.col = self.col.min(line_len.saturating_sub(1));
+                    true
+                } else {
+                    false
+                }
+            }
+        }
     }
 }
 
@@ -327,5 +345,51 @@ mod position_tests {
         let mut pos = Position { row: 2, col: 1 }; // Start at beginning of " World"
         assert!(pos.move_one_char_skip_spaces(&buffer, Direction::Backward));
         assert_eq!(pos, Position { row: 1, col: 0 }); // Should stop at empty line
+    }
+
+    #[test]
+    fn test_move_one_line() {
+        let buffer = vec![
+            String::from("Hello"),
+            String::from("World"),
+            String::from("Rust"),
+        ]
+        .into();
+
+        let mut pos = Position { row: 0, col: 2 };
+        assert!(pos.move_one_line(&buffer, Direction::Forward));
+        assert_eq!(pos, Position { row: 1, col: 2 });
+
+        assert!(pos.move_one_line(&buffer, Direction::Forward));
+        assert_eq!(pos, Position { row: 2, col: 2 });
+
+        assert!(!pos.move_one_line(&buffer, Direction::Forward)); // At last line
+
+        assert!(pos.move_one_line(&buffer, Direction::Backward));
+        assert_eq!(pos, Position { row: 1, col: 2 });
+
+        assert!(pos.move_one_line(&buffer, Direction::Backward));
+        assert_eq!(pos, Position { row: 0, col: 2 });
+
+        assert!(!pos.move_one_line(&buffer, Direction::Backward)); // At first line
+    }
+
+    #[test]
+    fn test_move_one_line_edge_case() {
+        let buffer = vec![
+            String::from("Short"),
+            String::new(),
+            String::from("A much longer line"),
+        ]
+        .into();
+
+        let mut pos = Position { row: 0, col: 1 };
+
+        assert!(pos.move_one_line(&buffer, Direction::Forward));
+        assert_eq!(pos, Position { row: 1, col: 0 });
+
+        // This would need to be changed once memorized j motion is implemented
+        assert!(pos.move_one_line(&buffer, Direction::Forward));
+        assert_eq!(pos, Position { row: 2, col: 0 });
     }
 }
