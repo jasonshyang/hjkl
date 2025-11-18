@@ -1,5 +1,8 @@
 use crate::{
-    motions::{b_motion, e_motion, h_motion, j_motion, k_motion, l_motion, w_motion},
+    motions::{
+        basic::{h_motion, j_motion, k_motion, l_motion},
+        words::{b_motion, e_motion, w_motion},
+    },
     types::{Buffer, Position},
 };
 
@@ -18,22 +21,7 @@ pub enum Motion {
 }
 
 impl Motion {
-    pub fn from_char(c: char) -> Option<Motion> {
-        match c {
-            'h' => Some(Motion::Left),
-            'j' => Some(Motion::Down),
-            'k' => Some(Motion::Up),
-            'l' => Some(Motion::Right),
-            'w' => Some(Motion::WordStart),
-            'e' => Some(Motion::WordEnd),
-            'b' => Some(Motion::WordBackward),
-            'W' => Some(Motion::WORDStart),
-            'E' => Some(Motion::WORDEnd),
-            'B' => Some(Motion::WORDBackward),
-            _ => None,
-        }
-    }
-
+    /// Applies the motion to the given buffer and position, returning the new position.
     pub fn apply(&self, buffer: &Buffer, position: Position, count: usize) -> Position {
         match self {
             Motion::Left => h_motion(buffer, position, count),
