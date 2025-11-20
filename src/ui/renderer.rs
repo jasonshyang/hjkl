@@ -1,5 +1,5 @@
 use crate::{
-    app::Editor,
+    gameplay::Editor,
     ui::{constants::*, viewport::Viewport},
 };
 use crossterm::event::KeyEvent;

@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::{app::types::Action, motions::Motion, utils::BoundedQueue};
+use crate::{gameplay::types::Action, motions::Motion, utils::BoundedQueue};
 
 const EVENT_HISTORY_LEN: usize = 32;
 const MOTION_HISTORY_LEN: usize = 8;

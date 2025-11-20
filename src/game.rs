@@ -4,7 +4,7 @@ use crossterm::event::Event;
 use ratatui::Terminal;
 
 use crate::{
-    app::{Editor, input::InputManager, types::Action},
+    gameplay::{Action, Editor, InputManager},
     ui::UiManager,
 };
 
