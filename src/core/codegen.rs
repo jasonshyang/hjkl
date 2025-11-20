@@ -1,7 +1,7 @@
 use rand::Rng;
 use rand::seq::IndexedRandom;
 
-use crate::types::Buffer;
+use crate::core::Buffer;
 
 const FN_NAMES: &[&str] = &[
     "process",
