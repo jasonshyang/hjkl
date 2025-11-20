@@ -1,7 +1,8 @@
 use crate::{
-    app::GameState,
+    app::Editor,
     ui::{constants::*, viewport::Viewport},
 };
+use crossterm::event::KeyEvent;
 use ratatui::{
     Frame,
     layout::Rect,
@@ -11,9 +12,9 @@ use ratatui::{
 };
 
 /// Renders the text buffer with the cursor highlighted.
-pub fn render_buffer(f: &mut Frame, game: &GameState, viewport: &Viewport, area: Rect) {
-    let cursor = game.cursor();
-    let buffer = game.buffer();
+pub fn render_buffer(f: &mut Frame, editor: &Editor, viewport: &Viewport, area: Rect) {
+    let cursor = editor.cursor();
+    let buffer = editor.buffer();
     let mut lines = vec![];
 
     // Calculate visible area
@@ -66,4 +67,34 @@ pub fn render_buffer(f: &mut Frame, game: &GameState, viewport: &Viewport, area:
         Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title(TITLE));
 
     f.render_widget(paragraph, area);
+}
+
+/// Renders the status bar at the bottom of the UI.
+pub fn render_status_bar<'a>(
+    f: &mut Frame,
+    game: &Editor,
+    keys_iter: impl Iterator<Item = &'a KeyEvent>,
+    area: Rect,
+) {
+    let cursor = game.cursor();
+    let recent_pressed = recent_pressed(keys_iter);
+    let status_text = format!(
+        "Position: {}:{} | Recent Keys: [{}] | {}",
+        cursor.row, cursor.col, recent_pressed, STATUS_INSTRUCTIONS
+    );
+
+    let status = Paragraph::new(status_text)
+        .style(Style::default().bg(STATUS_BG_COLOR).fg(STATUS_FG_COLOR))
+        .block(Block::default().borders(Borders::ALL));
+
+    f.render_widget(status, area);
+}
+
+fn recent_pressed<'a>(keys_iter: impl Iterator<Item = &'a KeyEvent>) -> String {
+    let mut keys = vec![];
+    for key in keys_iter.take(5) {
+        keys.push(key.code.to_string());
+    }
+    keys.reverse();
+    keys.join(" ")
 }

@@ -1,4 +1,4 @@
-use crate::{types::Position, ui::constants::VIEWPORT_PADDING};
+use crate::{core::Position, ui::constants::VIEWPORT_PADDING};
 
 /// Manages the viewport offset for scrolling through the buffer.
 ///
@@ -84,8 +84,8 @@ mod tests {
         let mut viewport = Viewport::default();
         let cursor = Position { row: 2, col: 0 };
 
-        // Starting at row 2, for 20 rows visible we should not scroll
-        viewport.adjust_for_cursor(cursor, 20, 100);
+        // Starting at row 2, with 100 total lines and 20 rows visible we should not scroll
+        viewport.adjust_for_cursor(cursor, 100, 20);
 
         // Viewport should remain at 0
         assert_eq!(viewport.visible_line_start(), 0);
@@ -96,9 +96,9 @@ mod tests {
         let mut viewport = Viewport::default();
         let cursor = Position { row: 18, col: 0 };
 
-        // For 20 rows visible with initial 0 line start and 3 padding,
+        // For 20 rows visible (100 total lines) with initial 0 line start and 3 padding,
         // we expect to start scrolling when cursor exceeds row 16 (0-indexed)
-        viewport.adjust_for_cursor(cursor, 20, 100);
+        viewport.adjust_for_cursor(cursor, 100, 20);
 
         // because cursor is at 18, our first line should now be 2
         assert_eq!(viewport.visible_line_start(), 2);
@@ -110,7 +110,7 @@ mod tests {
         let cursor = Position { row: 98, col: 0 };
 
         // With 100 lines and visible_height=20, max offset is 80
-        viewport.adjust_for_cursor(cursor, 20, 100);
+        viewport.adjust_for_cursor(cursor, 100, 20);
         assert_eq!(viewport.visible_line_start(), 80);
     }
 }

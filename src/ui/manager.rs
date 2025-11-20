@@ -1,7 +1,8 @@
 use crate::{
-    app::GameState,
-    ui::{buffer, constants::STATUS_BAR_HEIGHT, status_bar, viewport::Viewport},
+    app::Editor,
+    ui::{constants::STATUS_BAR_HEIGHT, renderer, viewport::Viewport},
 };
+use crossterm::event::KeyEvent;
 use ratatui::{
     Frame,
     layout::{Constraint, Layout},
@@ -29,7 +30,12 @@ impl UiManager {
     /// ├─────────────────────┤
     /// │  Status bar         │
     /// └─────────────────────┘
-    pub fn render(&mut self, f: &mut Frame, game: &GameState) {
+    pub fn render<'a>(
+        &mut self,
+        f: &mut Frame,
+        game: &Editor,
+        keys_iter: impl Iterator<Item = &'a KeyEvent>,
+    ) {
         // Define layout chunks
         let chunks = Layout::default()
             .constraints([Constraint::Min(0), Constraint::Length(STATUS_BAR_HEIGHT)])
@@ -42,7 +48,7 @@ impl UiManager {
         self.viewport
             .adjust_for_cursor(game.cursor(), game.buffer_lines(), visible_height);
 
-        buffer::render_buffer(f, game, &self.viewport, chunks[0]);
-        status_bar::render_status_bar(f, game, chunks[1]);
+        renderer::render_buffer(f, game, &self.viewport, chunks[0]);
+        renderer::render_status_bar(f, game, keys_iter, chunks[1]);
     }
 }

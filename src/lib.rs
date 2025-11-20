@@ -1,5 +1,5 @@
 pub mod app;
+pub mod core;
 pub mod motions;
-pub mod types;
 pub mod ui;
 pub mod utils;

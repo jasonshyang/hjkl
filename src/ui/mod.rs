@@ -1,7 +1,6 @@
-mod buffer;
 mod constants;
 mod manager;
-mod status_bar;
+mod renderer;
 mod viewport;
 
 pub use manager::UiManager;

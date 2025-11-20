@@ -1,8 +1,7 @@
 use ratatui::style::Color;
 
 pub const TITLE: &str = "HJKL Vim Motions Practice";
-pub const STATUS_INSTRUCTIONS: &str =
-    "Press ':q' to quit, ':n' for new round | h/j/k/l: move | w/e/b: word motions";
+pub const STATUS_INSTRUCTIONS: &str = "Press ':q' to quit, ':n' for new round";
 
 pub const STATUS_BAR_HEIGHT: u16 = 3;
 pub const VIEWPORT_PADDING: usize = 3;

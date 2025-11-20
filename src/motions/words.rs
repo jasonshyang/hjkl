@@ -1,5 +1,5 @@
 use crate::{
-    types::{Buffer, Direction, Position},
+    core::{Buffer, Direction, Position},
     utils::word_boundaries,
 };
 
@@ -17,7 +17,7 @@ pub fn w_motion(buffer: &Buffer, mut position: Position, count: usize) -> Positi
 }
 
 // Jump forwards to the start of a word, stop at empty line
-fn w_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
+pub fn w_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
     let Some(line) = buffer.get_line(position.row) else {
         return false;
     };
@@ -29,12 +29,12 @@ fn w_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
             position.col = end;
 
             // We then move right and skip all whitespaces
-            position.move_one_char_skip_spaces(buffer, Direction::Forward)
+            position.step_char_skip_spaces(buffer, Direction::Forward)
         }
         // We are on a space
         None => {
             // Just need to move right
-            position.move_one_char(buffer, Direction::Forward)
+            position.step_char_skip_spaces(buffer, Direction::Forward)
         }
     }
 }
@@ -63,7 +63,7 @@ pub fn b_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
         Some((start, _)) => {
             if position.col == start {
                 // Already at the start of the word, need to move left first
-                if !position.move_one_char_skip_spaces(buffer, Direction::Backward) {
+                if !position.step_char_skip_spaces(buffer, Direction::Backward) {
                     return false;
                 }
 
@@ -88,7 +88,7 @@ pub fn b_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
         // We are on a space
         None => {
             // Just need to move left
-            position.move_one_char(buffer, Direction::Backward)
+            position.step_char(buffer, Direction::Backward)
         }
     }
 }
@@ -108,10 +108,10 @@ pub fn e_motion(buffer: &Buffer, mut position: Position, count: usize) -> Positi
 }
 
 /// Forward to the end of word |inclusive|. Does not stop in an empty line.
-fn e_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
+pub fn e_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
     loop {
         // We first move right by one
-        if !position.move_one_char(buffer, Direction::Forward) {
+        if !position.step_char(buffer, Direction::Forward) {
             // If we can't move right, we're at the end of the buffer
             return false;
         }
@@ -135,7 +135,7 @@ fn e_motion_once(buffer: &Buffer, position: &mut Position) -> bool {
 #[cfg(test)]
 mod motion_tests {
     use super::*;
-    use crate::types::Buffer;
+    use crate::core::Buffer;
 
     #[test]
     fn test_motion_e() {
