@@ -1,7 +1,10 @@
+use std::path::Path;
+use std::{fs, io};
+
 use rand::Rng;
 use rand::seq::IndexedRandom;
 
-use crate::core::Buffer;
+use crate::domain::Buffer;
 
 const FN_NAMES: &[&str] = &[
     "process",
@@ -66,6 +69,13 @@ const IMPORTS: &[&str] = &[
     "use serde_json::json;",
     "use std::fmt;",
 ];
+
+/// Loads a text buffer from the specified file path
+pub fn load_buffer_from_file<P: AsRef<Path>>(path: P) -> io::Result<Buffer> {
+    let contents = fs::read_to_string(path)?;
+    let lines: Vec<String> = contents.lines().map(|s| s.to_string()).collect();
+    Ok(Buffer::from(lines))
+}
 
 /// Generates a random Rust code buffer, almost definitely won't compile :)
 pub fn generate_random_rust_code_buffer() -> Buffer {

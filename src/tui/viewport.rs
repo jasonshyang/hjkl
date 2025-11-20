@@ -1,4 +1,4 @@
-use crate::{core::Position, ui::constants::VIEWPORT_PADDING};
+use crate::{domain::Position, tui::theme::VIEWPORT_PADDING};
 
 /// Manages the viewport offset for scrolling through the buffer.
 ///

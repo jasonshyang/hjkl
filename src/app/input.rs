@@ -1,10 +1,33 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::{app::types::Action, motions::Motion, utils::BoundedQueue};
+use crate::domain::{motions::Motion, types::BoundedQueue};
 
 const EVENT_HISTORY_LEN: usize = 32;
 const MOTION_HISTORY_LEN: usize = 8;
 
+/// Represents an action resulting from user input.
+#[derive(Clone, Copy)]
+pub enum UserAction {
+    Motion((Motion, Option<usize>)),
+    Noop,
+    Pending,
+    NewGame,
+    Quit,
+}
+
+impl UserAction {
+    /// Creates a UserAction for a single motion.
+    fn single_motion(motion: Motion) -> Self {
+        UserAction::Motion((motion, None))
+    }
+
+    /// Creates a UserAction for a repeated motion.
+    fn repeated_motion(motion: Motion, count: usize) -> Self {
+        UserAction::Motion((motion, Some(count)))
+    }
+}
+
+/// Represents the current state of input processing.
 #[derive(Default)]
 pub enum InputState {
     /// Waiting for initial input
@@ -12,16 +35,19 @@ pub enum InputState {
     Idle,
     /// Accumulated a count
     Counting(usize),
+    /// Awaiting target character for find/till motions
     AwaitingTarget {
         motion: &'static str,
         count: Option<usize>,
     },
+    /// Awaiting command prefix for combos
     AwaitingCombo {
         prefix: &'static str,
         count: Option<usize>,
     },
 }
 
+/// Manages user input and translates it into actions.
 pub struct InputManager {
     state: InputState,
     event_history: BoundedQueue<KeyEvent>,
@@ -49,7 +75,7 @@ impl InputManager {
         self.event_history.reverse_iter()
     }
 
-    pub fn handle(&mut self, key: KeyEvent) -> Action {
+    pub fn handle_key(&mut self, key: KeyEvent) -> UserAction {
         let action = match &self.state {
             InputState::Idle => self.handle_idle(key),
             InputState::Counting(count) => self.handle_counting(*count, key),
@@ -61,6 +87,7 @@ impl InputManager {
         action
     }
 
+    /// Maps simple key events to motions.
     fn map_key_to_motion(key: KeyEvent) -> Option<Motion> {
         match (key.code, key.modifiers) {
             (KeyCode::Char('h'), KeyModifiers::NONE) => Some(Motion::Left),
@@ -74,58 +101,59 @@ impl InputManager {
         }
     }
 
-    fn handle_idle(&mut self, key: KeyEvent) -> Action {
+    /// Handle input from the Idle state.
+    fn handle_idle(&mut self, key: KeyEvent) -> UserAction {
         match (key.code, key.modifiers) {
             (KeyCode::Char(c @ '1'..='9'), KeyModifiers::NONE) => {
                 let digit = c.to_digit(10).unwrap() as usize;
                 self.state = InputState::Counting(digit);
-                Action::Pending
+                UserAction::Pending
             }
             (KeyCode::Char('f'), KeyModifiers::NONE) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "f",
                     count: None,
                 };
-                Action::Pending
+                UserAction::Pending
             }
-            (KeyCode::Char('F'), KeyModifiers::NONE) => {
+            (KeyCode::Char('F'), KeyModifiers::SHIFT) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "F",
                     count: None,
                 };
-                Action::Pending
+                UserAction::Pending
             }
             (KeyCode::Char('t'), KeyModifiers::NONE) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "t",
                     count: None,
                 };
-                Action::Pending
+                UserAction::Pending
             }
-            (KeyCode::Char('T'), KeyModifiers::NONE) => {
+            (KeyCode::Char('T'), KeyModifiers::SHIFT) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "T",
                     count: None,
                 };
-                Action::Pending
+                UserAction::Pending
             }
 
             (KeyCode::Char(';'), KeyModifiers::NONE) => {
                 if let Some(last) = self.motion_history.last()
                     && last.is_find_till()
                 {
-                    Action::single_motion(*last)
+                    UserAction::single_motion(*last)
                 } else {
-                    Action::Noop
+                    UserAction::Noop
                 }
             }
             (KeyCode::Char(','), KeyModifiers::NONE) => {
                 if let Some(last) = self.motion_history.last()
                     && let Some(reversed) = last.reverse_find_till()
                 {
-                    Action::single_motion(reversed)
+                    UserAction::single_motion(reversed)
                 } else {
-                    Action::Noop
+                    UserAction::Noop
                 }
             }
 
@@ -134,55 +162,56 @@ impl InputManager {
                     prefix: ":",
                     count: None,
                 };
-                Action::Pending
+                UserAction::Pending
             }
 
             _ => {
                 if let Some(motion) = Self::map_key_to_motion(key) {
                     self.motion_history.push(motion);
-                    Action::single_motion(motion)
+                    UserAction::single_motion(motion)
                 } else {
-                    Action::Noop
+                    UserAction::Noop
                 }
             }
         }
     }
 
-    fn handle_counting(&mut self, current: usize, key: KeyEvent) -> Action {
+    /// Handle input from the Counting state.
+    fn handle_counting(&mut self, current: usize, key: KeyEvent) -> UserAction {
         match (key.code, key.modifiers) {
             (KeyCode::Char(c @ '0'..='9'), KeyModifiers::NONE) => {
                 let digit = c.to_digit(10).expect("Checked range") as usize;
                 let new_count = current * 10 + digit;
                 self.state = InputState::Counting(new_count);
-                Action::Pending
+                UserAction::Pending
             }
             (KeyCode::Char('f'), KeyModifiers::NONE) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "f",
                     count: Some(current),
                 };
-                Action::Pending
+                UserAction::Pending
             }
-            (KeyCode::Char('F'), KeyModifiers::NONE) => {
+            (KeyCode::Char('F'), KeyModifiers::SHIFT) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "F",
                     count: Some(current),
                 };
-                Action::Pending
+                UserAction::Pending
             }
             (KeyCode::Char('t'), KeyModifiers::NONE) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "t",
                     count: Some(current),
                 };
-                Action::Pending
+                UserAction::Pending
             }
-            (KeyCode::Char('T'), KeyModifiers::NONE) => {
+            (KeyCode::Char('T'), KeyModifiers::SHIFT) => {
                 self.state = InputState::AwaitingTarget {
                     motion: "T",
                     count: Some(current),
                 };
-                Action::Pending
+                UserAction::Pending
             }
 
             _ => {
@@ -190,20 +219,21 @@ impl InputManager {
 
                 if let Some(motion) = Self::map_key_to_motion(key) {
                     self.motion_history.push(motion);
-                    Action::repeated_motion(motion, current)
+                    UserAction::repeated_motion(motion, current)
                 } else {
-                    Action::Noop
+                    UserAction::Noop
                 }
             }
         }
     }
 
+    /// Handle input from the AwaitingTarget state.
     fn handle_target(
         &mut self,
         motion: &'static str,
         count: Option<usize>,
         key: KeyEvent,
-    ) -> Action {
+    ) -> UserAction {
         match key.code {
             KeyCode::Char(c) => {
                 let motion = match motion {
@@ -218,33 +248,34 @@ impl InputManager {
                 self.state = InputState::Idle;
 
                 if let Some(cnt) = count {
-                    Action::repeated_motion(motion, cnt)
+                    UserAction::repeated_motion(motion, cnt)
                 } else {
-                    Action::single_motion(motion)
+                    UserAction::single_motion(motion)
                 }
             }
-            _ => Action::Noop,
+            _ => UserAction::Noop,
         }
     }
 
+    /// Handle input from the AwaitingCombo state.
     fn handle_combo(
         &mut self,
         prefix: &'static str,
         _count: Option<usize>,
         key: KeyEvent,
-    ) -> Action {
+    ) -> UserAction {
         match (prefix, key.code, key.modifiers) {
             (":", KeyCode::Char('q'), KeyModifiers::NONE) => {
                 self.state = InputState::Idle;
-                Action::Quit
+                UserAction::Quit
             }
             (":", KeyCode::Char('n'), KeyModifiers::NONE) => {
                 self.state = InputState::Idle;
-                Action::NewGame
+                UserAction::NewGame
             }
             _ => {
                 self.state = InputState::Idle;
-                Action::Noop
+                UserAction::Noop
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::core::{Buffer, Direction, Position};
+use crate::domain::{Buffer, Direction, Position};
 
 /// Moves the cursor left by `count` characters.
 pub fn h_motion(buffer: &Buffer, mut position: Position, count: usize) -> Position {

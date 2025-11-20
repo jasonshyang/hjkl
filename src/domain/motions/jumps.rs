@@ -1,4 +1,4 @@
-use crate::core::{Buffer, Direction, Position};
+use crate::domain::{Buffer, Direction, Position};
 
 pub fn f_motion(tar: char, buffer: &Buffer, mut position: Position, count: usize) -> Position {
     for _ in 0..count {

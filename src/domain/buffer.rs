@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use crate::core::Position;
+use rand::Rng;
+
+use crate::domain::Position;
 
 /// Represents a text buffer
 #[derive(Default, Debug)]
@@ -36,6 +38,10 @@ impl Buffer {
             Some(c) => c.is_whitespace(),
             None => false, // empty is not space
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Returns true if the line at the specified position is empty
@@ -74,6 +80,59 @@ impl Buffer {
             && pos.col < line.len()
         {
             line.remove(pos.col);
+        }
+    }
+
+    /// Return a random position on the buffer
+    pub fn random_position(&self, allow_space: bool) -> Option<Position> {
+        if self.is_empty() {
+            return None;
+        }
+
+        loop {
+            let mut rng = rand::rng();
+            let row = rng.random_range(0..self.rows());
+            let line_len = self.get_line_len(row);
+            if line_len == 0 {
+                continue;
+            }
+            let col = rng.random_range(0..=line_len);
+            let pos = Position { row, col };
+            if allow_space || !self.is_space(&pos) {
+                return Some(pos);
+            }
+        }
+    }
+
+    pub fn random_position_from(
+        &self,
+        start: Position,
+        radius: usize,
+        allow_space: bool,
+    ) -> Option<Position> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let start_row = start.row.saturating_sub(radius);
+        let end_row = (start.row + radius).min(self.rows() - 1);
+        let start_col = start.col.saturating_sub(radius);
+        let end_col = start.col + radius;
+
+        loop {
+            let mut rng = rand::rng();
+            let row = rng.random_range(start_row..=end_row);
+            let line_len = self.get_line_len(row);
+            if line_len == 0 {
+                continue;
+            }
+
+            let col = rng.random_range(start_col.min(line_len)..=end_col.min(line_len));
+            let pos = Position { row, col };
+
+            if allow_space || !self.is_space(&pos) {
+                return Some(pos);
+            }
         }
     }
 }

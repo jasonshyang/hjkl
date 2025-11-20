@@ -1,7 +1,7 @@
-use crate::core::{Buffer, Direction};
+use crate::domain::{Buffer, Direction};
 
 /// Represents a position in the text buffer
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Hash)]
 pub struct Position {
     pub row: usize,
     pub col: usize,

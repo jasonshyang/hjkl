@@ -1,8 +1,6 @@
-use std::fmt::Display;
-
 use crate::{
-    core::{Buffer, Position},
-    motions::{basic::*, jumps::*, words::*},
+    domain::motions::{basic::*, jumps::*, words::*},
+    domain::{Buffer, Position},
 };
 
 /// Represents different Vim Motions
@@ -16,17 +14,16 @@ pub enum Motion {
     WordStart,    // w - start of next word
     WordEnd,      // e - end of current/next word
     WordBackward, // b - start of previous word
-    WORDStart,    // W - start of next WORD
-    WORDEnd,      // E - end of current/next WORD
-    WORDBackward, // B - start of previous WORD
-
+    // WORDStart,    // W - start of next WORD
+    // WORDEnd,      // E - end of current/next WORD
+    // WORDBackward, // B - start of previous WORD
     FindNextChar(char), // f{char}
     FindPrevChar(char), // F{char}
     TillNextChar(char), // t{char}
     TillPrevChar(char), // T{char}
 
-    LineStart, // 0
-    LineEnd,   // $
+                        // LineStart, // 0
+                        // LineEnd,   // $
 }
 
 impl Motion {
@@ -42,6 +39,16 @@ impl Motion {
 
     pub fn is_vertical(&self) -> bool {
         matches!(self, Motion::Up | Motion::Down)
+    }
+
+    pub fn needs_target(&self) -> bool {
+        matches!(
+            self,
+            Motion::FindNextChar(_)
+                | Motion::FindPrevChar(_)
+                | Motion::TillNextChar(_)
+                | Motion::TillPrevChar(_)
+        )
     }
 
     pub fn reverse_find_till(&self) -> Option<Motion> {
@@ -68,33 +75,6 @@ impl Motion {
             Motion::FindPrevChar(tar) => big_f_motion(*tar, buffer, position, count),
             Motion::TillNextChar(tar) => t_motion(*tar, buffer, position, count),
             Motion::TillPrevChar(tar) => big_t_motion(*tar, buffer, position, count),
-            _ => {
-                unimplemented!("This motion is not yet implemented");
-            }
         }
-    }
-}
-
-impl Display for Motion {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Motion::Left => "h",
-            Motion::Down => "j",
-            Motion::Up => "k",
-            Motion::Right => "l",
-            Motion::WordStart => "w",
-            Motion::WordEnd => "e",
-            Motion::WordBackward => "b",
-            Motion::WORDStart => "W",
-            Motion::WORDEnd => "E",
-            Motion::WORDBackward => "B",
-            Motion::FindNextChar(c) => return write!(f, "f{}", c),
-            Motion::FindPrevChar(c) => return write!(f, "F{}", c),
-            Motion::TillNextChar(c) => return write!(f, "t{}", c),
-            Motion::TillPrevChar(c) => return write!(f, "T{}", c),
-            Motion::LineStart => "0",
-            Motion::LineEnd => "$",
-        };
-        write!(f, "{s}")
     }
 }
