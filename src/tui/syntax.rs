@@ -61,7 +61,7 @@ pub fn tokenize_line(line: &str) -> Vec<Token> {
     while let Some(&ch) = chars.peek() {
         match ch {
             // Handle comments
-            '/' if chars.clone().nth(1) == Some('/') => {
+            '/' if chars.nth(1) == Some('/') => {
                 if !current.is_empty() {
                     tokens.push(classify_token(current.clone()));
                     current.clear();
